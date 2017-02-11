@@ -5,6 +5,7 @@ BunnyState = {
 	WALKING: 1,
 	KISSING: 2,
 	BORN: 3,
+	THROWN: 4,
 }
 
 var background;
@@ -16,6 +17,7 @@ var loveMeter;
 
 var player;
 var playerState;
+var isCarrying;
 var destination;
 
 function preload() {
@@ -37,7 +39,7 @@ function create() {
 
 	//background = game.add.sprite(0, 0, 'background');
 
-	var floor = game.add.tileSprite(-65536, 128, 65776, 32, 'floor');
+	var floor = game.add.tileSprite(-1000000, 128, 2000000, 32, 'floor');
 
 	var fox = game.add.sprite(128, 48, 'fox');
 
@@ -45,7 +47,7 @@ function create() {
 	for (var i = 0; i < bunnies.length; i++) {
 
 		var bunny = {
-			sprite: game.add.sprite(i, 128, 'bunny_male'),
+			sprite: game.add.sprite(0, 128, 'bunny_male'),
 			state: BunnyState.IDLE,
 			destination: 0,
 			timer: Math.random() * 3 + 2,
@@ -71,6 +73,8 @@ function create() {
 	player.animations.add('idle', [0, 1, 2, 3, 4, 5], 12, true);
 	player.animations.add('walk', [6, 7, 8, 9, 10, 11], 12, true);
 	player.animations.add('kiss', [12, 13, 14, 15], 12, true);
+	player.animations.add('idle_carrying', [24], 0);
+	player.animations.add('walk_carrying', [25, 26, 27, 28, 29, 30], 12, true);
 	player.animations.play('idle');
 	playerState = BunnyState.IDLE;
 	destination = player.x;
@@ -97,7 +101,8 @@ function update() {
 					bunny.destination = bunny.sprite.x + ((Math.random() < .5) ? -1 : 1) * ((Math.random() * 50) + 50);
 					bunny.sprite.scale.x = Math.sign(bunny.destination - bunny.sprite.x) * Math.abs(bunny.sprite.scale.x);
 					bunny.state = BunnyState.WALKING;
-				} break;
+				}
+				break;
 			case BunnyState.WALKING:
 				var distance = bunny.destination - bunny.sprite.x;
 				bunny.sprite.x += Math.sign(distance) * game.time.physicsElapsed * 40;
@@ -107,13 +112,28 @@ function update() {
 					bunny.sprite.animations.play('idle');
 					bunny.state = BunnyState.IDLE;
 					bunny.timer = Math.random() * 3 + 2;
-				} break;
+				}
+				break;
 			case BunnyState.BORN:
 				if (bunny.sprite.animations.currentAnim.isFinished) {
 					bunny.sprite.animations.play('idle');
 					bunny.state = BunnyState.IDLE;
 					bunny.timer = Math.random() * 3 + 2;
-				} break;
+				}
+				break;
+			case BunnyState.THROWN:
+				bunny.sprite.x += bunny.force.x * game.time.physicsElapsed;
+				bunny.sprite.y += bunny.force.y * game.time.physicsElapsed;
+				bunny.force.y += 15;
+
+				if (bunny.sprite.y >= 128) {
+					bunny.sprite.y = 128;
+
+					bunny.sprite.animations.play('idle');
+					bunny.state = BunnyState.IDLE;
+					bunny.timer = Math.random() * 3 + 2;
+				}
+				break;
 		}
 	}
 
@@ -122,44 +142,49 @@ function update() {
 	if (pointer.isDown) {
 		destination = pointer.worldX;
 
-		var setTargetBunny = true;
-		if (targetBunny != null) {
-			var rect = new Phaser.Rectangle(targetBunny.sprite.left, targetBunny.sprite.top, targetBunny.sprite.width, targetBunny.sprite.height);
-			if (rect.contains(pointer.worldX, pointer.worldY)) {
-				setTargetBunny = false;
-				destination = targetBunny.sprite.x;
-			} else {
-				targetBunny.sprite.animations.play('idle');
-				targetBunny.state = BunnyState.IDLE;
-				targetBunny.timer = Math.random() * 3 + 2;
-			}
-		}
-
-		if (setTargetBunny) {
-			targetBunny = null;
-			for (var i = 0; i < bunnies.length; i++) {
-				var bunny = bunnies[i];
-				if (!bunny.sprite.visible) { continue; }
-				var rect = new Phaser.Rectangle(bunny.sprite.left, bunny.sprite.top, bunny.sprite.width, bunny.sprite.height);
+		if (!isCarrying) {
+			var setTargetBunny = true;
+			if (targetBunny != null) {
+				// note: due to sprite.input.pointerOver() behaving weird resorted to checking the bound contain myself
+				var rect = new Phaser.Rectangle(Math.min(targetBunny.sprite.left, targetBunny.sprite.right), targetBunny.sprite.top, Math.abs(targetBunny.sprite.width), targetBunny.sprite.height);
 				if (rect.contains(pointer.worldX, pointer.worldY)) {
-					targetBunny = bunny;
+					setTargetBunny = false;
+					destination = targetBunny.sprite.x;
+				} else {
 					targetBunny.sprite.animations.play('idle');
 					targetBunny.state = BunnyState.IDLE;
-					destination = targetBunny.sprite.x;
-					break;
+					targetBunny.timer = Math.random() * 3 + 2;
 				}
 			}
-		}
 
-		if ((targetBunny == null) && !((playerState == BunnyState.IDLE) || (playerState == BunnyState.WALKING))) {
-			player.animations.play('idle');
-			playerState = BunnyState.IDLE;
+			if (setTargetBunny) {
+				targetBunny = null;
+				for (var i = 0; i < bunnies.length; i++) {
+					var bunny = bunnies[i];
+					if (!bunny.sprite.visible) { continue; }
+					// note: due to sprite.input.pointerOver() behaving weird resorted to checking the bound contain myself
+					var rect = new Phaser.Rectangle(Math.min(bunny.sprite.left, bunny.sprite.right), bunny.sprite.top, Math.abs(bunny.sprite.width), bunny.sprite.height);
+					if (rect.contains(pointer.worldX, pointer.worldY)) {
+						targetBunny = bunny;
+						targetBunny.sprite.animations.play('idle');
+						targetBunny.sprite.bringToTop();
+						targetBunny.state = BunnyState.IDLE;
+						destination = targetBunny.sprite.x;
+						break;
+					}
+				}
+			}
+
+			if ((targetBunny == null) && !((playerState == BunnyState.IDLE) || (playerState == BunnyState.WALKING))) {
+				player.animations.play('idle');
+				playerState = BunnyState.IDLE;
+			}
 		}
 	}
 
 	loveMeter = (playerState == BunnyState.KISSING) ?
-		Math.max(loveMeter - game.time.physicsElapsed, 0) :
-		Math.min(loveMeter + game.time.physicsElapsed, 1);
+	 	Math.max(loveMeter - game.time.physicsElapsed / 2, 0) :
+	 	Math.min(loveMeter + game.time.physicsElapsed / 5, 1);
 
 	var deltaDest = destination - player.x;
 	var dirDest = Math.sign(deltaDest);
@@ -168,18 +193,37 @@ function update() {
 	// update player
 	switch (playerState) {
 		case BunnyState.IDLE:
-			if (deltaDest > 8) {
-				player.animations.play('walk');
+			if (deltaDest >= 8) {
+				if (isCarrying) {
+					player.animations.play('walk_carrying');
+				} else {
+					player.animations.play('walk');
+				}
 				playerState = BunnyState.WALKING;
-			} break;
+			}
+			break;
 		case BunnyState.WALKING:
 			if (deltaDest < 8) {
-				player.animations.play('idle');
+				if (isCarrying) {
+					if (targetBunny.timer <= 0) {
+						targetBunny.force = new Phaser.Point(dirDest * 200, -200);
+						targetBunny.state = BunnyState.THROWN;
+						isCarrying = false;
+						targetBunny = null;
+						player.animations.play('idle');
+					} else {
+						player.animations.play('idle_carrying');
+					}
+				} else {
+					player.animations.play('idle');
+				}
+
 				playerState = BunnyState.IDLE;
 			} else {
 				player.x += dirDest * game.time.physicsElapsed * 60;
 				player.scale.x = dirDest * Math.abs(player.scale.x);
-			} break;
+			}
+			break;
 	}
 
 	// handle target bunny
@@ -187,16 +231,26 @@ function update() {
 		switch (playerState) {
 			case BunnyState.IDLE:
 			case BunnyState.WALKING:
-				if (deltaDest < 16) {
-					if (loveMeter >= 1) {
-						targetBunny.sprite.animations.play('kiss');
-						targetBunny.sprite.scale.x = -dirDest * Math.abs(targetBunny.sprite.scale.x);
-						targetBunny.state = BunnyState.KISSING;
-						player.animations.play('kiss');
-						player.scale.x = dirDest * Math.abs(player.scale.x);
-						playerState = BunnyState.KISSING;
+				if (!isCarrying) {
+					if (deltaDest < 16) {
+						if (loveMeter >= 1) {
+							targetBunny.sprite.animations.play('kiss');
+							targetBunny.sprite.scale.x = -dirDest * Math.abs(targetBunny.sprite.scale.x);
+							targetBunny.state = BunnyState.KISSING;
+							player.animations.play('kiss');
+							player.scale.x = dirDest * Math.abs(player.scale.x);
+							playerState = BunnyState.KISSING;
+							break;
+						} 
 					}
-				} break;
+					if (deltaDest < 8) {
+						player.animations.play('idle_carrying');
+						playerState = BunnyState.IDLE;
+						isCarrying = true;
+						targetBunny.timer = .5;
+					}
+				}
+				break;
 		case BunnyState.KISSING:
 			if (loveMeter <= 0) {
 				var numBabies = Math.random() * 3 + 1;
@@ -216,11 +270,19 @@ function update() {
 				targetBunny.state = BunnyState.IDLE;
 				targetBunny.timer = Math.random() * 3 + 2;
 				targetBunny = null;
-			} break;
+			}
+			break;
 		}
 	}
 
 	game.camera.x = player.x - 120;
+
+	player.bringToTop();
+	if (isCarrying) {
+		targetBunny.sprite.position = new Phaser.Point(player.x, player.y - 24);
+		targetBunny.sprite.scale.x = dirDest * Math.abs(targetBunny.sprite.scale.x);
+		targetBunny.sprite.bringToTop();
+	}
 }
 
 function render() {
