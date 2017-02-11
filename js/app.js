@@ -1,4 +1,4 @@
-var game = new Phaser.Game(240, 160, Phaser.AUTO, '', { preload: preload, create: create, update: update }, null, false);
+var game = new Phaser.Game(240, 160, Phaser.AUTO, 'content', { preload: preload, create: create, update: update }, null, false);
 
 var background;
 var platforms;
@@ -10,10 +10,6 @@ var destination;
 
 function preload() {
 
-	Phaser.Canvas.setImageRenderingCrisp(game.canvas);
-	game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
-	game.scale.setUserScale(4, 4);
-
 	game.load.image('background', 'assets/scene.png?v=2');
 	game.load.image('floor', 'assets/floor.png');
 	game.load.image('fox', 'assets/fox.png');
@@ -22,6 +18,13 @@ function preload() {
 }
 
 function create() {
+
+	Phaser.Canvas.setImageRenderingCrisp(game.canvas);
+	game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+	game.scale.pageAlignHorizontally = true;
+	game.scale.pageAlignVertically = true;
+	game.scale.windowConstraints = { right: 'layout', bottom: 'layout' };
+
 	//background = game.add.sprite(0, 0, 'background');
 
 	var floor = game.add.tileSprite(-65536, 128, 65776, 32, 'floor');
@@ -54,6 +57,7 @@ function create() {
 	destination = player.x;
 
 	game.camera.bounds = null;
+	game.input.maxPointers = 1;
 }
 
 function update() {
