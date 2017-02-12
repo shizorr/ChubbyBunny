@@ -28,6 +28,14 @@ var destination;
 
 var heart;
 
+var playerDied;
+var playerVictorious;
+
+var sfxPoof;
+var sfxPickUp;
+var sfxThrow;
+var sfxDeath;
+
 function preload() {
 
 	game.load.image('background', 'assets/background.png?v=1');
@@ -40,6 +48,11 @@ function preload() {
 	game.load.image('fox_body_fg', 'assets/fox_body_fg.png');
 	game.load.image('fox_head_bg', 'assets/fox_head_bg.png');
 	game.load.image('fox_head_fg', 'assets/fox_head_fg.png');
+
+	game.load.audio('poof', 'assets/poof.ogg?v=1');
+	game.load.audio('pick_up', 'assets/pick_up.ogg');
+	game.load.audio('throw', 'assets/throw.ogg');
+	game.load.audio('death', 'assets/death.ogg');
 }
 
 function create() {
@@ -104,13 +117,18 @@ function create() {
 	game.camera.follow(player);
 	game.input.maxPointers = 1;
 
+	sfxPoof = game.add.audio('poof');
+	sfxPickUp = game.add.audio('pick_up');
+	sfxThrow = game.add.audio('throw');
+	sfxDeath = game.add.audio('death');
+
 	reset();
 }
 
 function update() {
 
 	if (player.x > foxBg.x + 8) {
-		reset();
+		playerDied = true;
 		return;
 	} 
 
@@ -119,7 +137,7 @@ function update() {
 	foxFg.x -= game.time.physicsElapsed * foxSpeedMultiplier;
 
 	if ((foxBg.x <= -140) && (numBunniesInMouth >= 16)) {
-		reset();
+		playerVictorious = true;
 	}
 
 	if (numBunniesInMouth > 0) {
@@ -134,6 +152,7 @@ function update() {
 
 			snapTimer = 10;
 			numBunniesInMouth = 0;
+			sfxDeath.play();
 		}
 	}
 
@@ -287,6 +306,7 @@ function update() {
 						isCarrying = false;
 						targetBunny = null;
 						player.animations.play('idle');
+						sfxThrow.play();
 					} else {
 						player.animations.play('idle_carrying');
 					}
@@ -324,11 +344,13 @@ function update() {
 						playerState = BunnyState.IDLE;
 						isCarrying = true;
 						targetBunny.timer = .5;
+						sfxPickUp.play();
 					}
 				}
 				break;
 		case BunnyState.KISSING:
 			if (loveMeter <= 0) {
+				sfxPoof.play();
 				var numBabies = Math.random() * 3 + 3;
 				for (var i = 0, len = bunnies.length; i < len; i++) {
 					if (!bunnies[i].sprite.visible) {
@@ -367,6 +389,14 @@ function update() {
 function render() {
 	game.debug.text(snapTimer, 8, 8);
 	game.debug.text(numBunniesInMouth, 8, 24);
+
+	if (playerDied) {
+		game.debug.text('YOU DIED', 64, 16);
+	}
+
+	if (playerVictorious) {
+		game.debug.text('YOU SURVIVED', 64, 16);
+	}
 }
 
 function reset() {
@@ -394,4 +424,7 @@ function reset() {
 	playerState = BunnyState.IDLE;
 	isCarrying = false;
 	destination = player.x;
+
+	playerDied = false;
+	playerVictorious = false;
 }
