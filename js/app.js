@@ -14,6 +14,8 @@ var platforms;
 
 var foxBg;
 var foxFg;
+var snapTimer;
+var numBunniesInMouth;
 
 var bunnies;
 var targetBunny;
@@ -50,8 +52,8 @@ function create() {
 	game.scale.pageAlignVertically = true;
 	game.scale.windowConstraints = { right: 'layout', bottom: 'layout' };
 
-	game.add.tileSprite(-1000000, 0, 2000000, 128, 'background');
-	game.add.tileSprite(-1000000, 128, 2000000, 32, 'floor');
+	game.add.tileSprite(-256, 0, 2048, 256, 'background').scale.setTo(.5, .5);
+	game.add.tileSprite(-256, 128, 2048, 32, 'floor');
 	game.add.tileSprite(-256, 0, 32, 128, 'wall');
 	heart = game.add.sprite(5, 5, 'heart');
 	heart.animations.add('progress', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 0);
@@ -107,8 +109,33 @@ function create() {
 
 function update() {
 
-	foxBg.x -= game.time.physicsElapsed;
-	foxFg.x -= game.time.physicsElapsed;
+	if (player.x > foxBg.x + 8) {
+		reset();
+		return;
+	} 
+
+	var foxSpeedMultiplier = Math.max(8 - numBunniesInMouth, 4);
+	foxBg.x -= game.time.physicsElapsed * foxSpeedMultiplier;
+	foxFg.x -= game.time.physicsElapsed * foxSpeedMultiplier;
+
+	if ((foxBg.x <= -140) && (numBunniesInMouth >= 16)) {
+		reset();
+	}
+
+	if (numBunniesInMouth > 0) {
+		snapTimer -= game.time.physicsElapsed;
+
+		if (snapTimer <= 0) {
+			for (var i = 0, len = bunnies.length; i < len; i++) {
+				if (bunnies[i].state == BunnyState.EATEN) {
+					bunnies[i].sprite.visible = false;
+				}
+			}
+
+			snapTimer = 10;
+			numBunniesInMouth = 0;
+		}
+	}
 
 	// update AI bunnies
 	for (var i = 0, len = bunnies.length; i < len; i++) {
@@ -172,6 +199,8 @@ function update() {
 			bunny.sprite.animations.play('idle');
 			bunny.state = BunnyState.EATEN;
 			bunny.offset = Math.round(Math.random() * 25) + 25;
+			++numBunniesInMouth;
+			snapTimer += 2.2;
 		}
 
 		if (bunny.sprite.x < -214) {
@@ -226,10 +255,9 @@ function update() {
 	}
 
 	loveMeter = (playerState == BunnyState.KISSING) ?
-	 	Math.max(loveMeter - game.time.physicsElapsed / 2, 0) :
-	 	Math.min(loveMeter + game.time.physicsElapsed / 5, 1);
+	 	Math.max(loveMeter - game.time.physicsElapsed / 4, 0) :
+	 	Math.min(loveMeter + game.time.physicsElapsed / 6, 1);
 	heart.animations.currentAnim.setFrame(Math.floor(loveMeter * 9));
-
 
 	var deltaDest = destination - player.x;
 	var dirDest = Math.sign(deltaDest);
@@ -248,9 +276,7 @@ function update() {
 			}
 			break;
 		case BunnyState.WALKING:
-			if (player.x > foxBg.x + 8) {
-				reset();
-			} else if (player.x < -214) {
+			if (player.x < -214) {
 				player.x = -214;
 			}
 			if (deltaDest < 8) {
@@ -303,7 +329,7 @@ function update() {
 				break;
 		case BunnyState.KISSING:
 			if (loveMeter <= 0) {
-				var numBabies = Math.random() * 3 + 1;
+				var numBabies = Math.random() * 3 + 3;
 				for (var i = 0, len = bunnies.length; i < len; i++) {
 					if (!bunnies[i].sprite.visible) {
 						bunnies[i].sprite.visible = true;
@@ -339,12 +365,15 @@ function update() {
 }
 
 function render() {
-	//game.debug.text(loveMeter, 8, 8);
+	game.debug.text(snapTimer, 8, 8);
+	game.debug.text(numBunniesInMouth, 8, 24);
 }
 
 function reset() {
 	foxBg.x = 128;
 	foxFg.x = 128;
+	snapTimer = 10;
+	numBunniesInMouth = 0;
 
 	for (var i = 1, len = bunnies.length; i < len; i++) {
 		bunnies[i].sprite.visible = false;
@@ -353,11 +382,12 @@ function reset() {
 	bunnies[0].sprite.y = 128;
 	bunnies[0].sprite.scale.x = Math.abs(bunnies[0].sprite.scale.x);
 	bunnies[0].sprite.visible = true;
+	bunnies[0].sprite.animations.play('idle');
 	bunnies[0].state = BunnyState.IDLE;
 	bunnies[0].timer = Math.random() * 3 + 2;
 
 	targetBunny = null;
-	loveMeter = 0;
+	loveMeter = 1;
 
 	player.x = 0;
 	player.animations.play('idle');
