@@ -160,7 +160,6 @@ function update() {
 
 		if ((bunny.state != BunnyState.EATEN) && (bunny.sprite.x >= foxBg.x + 12)) {
 			bunny.sprite.animations.play('idle');
-			bunny.sprite.inputEnabled = false;
 			bunny.state = BunnyState.EATEN;
 			bunny.offset = Math.round(Math.random() * 25) + 25;
 		}
@@ -292,8 +291,6 @@ function update() {
 						bunnies[i].sprite.x = targetBunny.sprite.x + ((Math.random() < .5) ? -1 : 1) * ((Math.random() * 20) + 10);
 						bunnies[i].sprite.y = 128;
 						bunnies[i].sprite.animations.play('born');
-						bunnies[i].sprite.inputEnabled = true;
-						bunnies[i].sprite.input.useHandCursor = true;
 						bunnies[i].state = BunnyState.BORN;
 						if (--numBabies <= 0) break;
 					}
@@ -336,8 +333,6 @@ function reset() {
 	bunnies[0].sprite.x = -16;
 	bunnies[0].sprite.y = 128;
 	bunnies[0].sprite.scale.x = Math.abs(bunnies[0].sprite.scale.x);
-	bunnies[0].sprite.inputEnabled = true;
-	bunnies[0].sprite.input.useHandCursor = true;
 	bunnies[0].sprite.visible = true;
 	bunnies[0].state = BunnyState.IDLE;
 	bunnies[0].timer = Math.random() * 3 + 2;
