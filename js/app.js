@@ -24,13 +24,15 @@ var playerState;
 var isCarrying;
 var destination;
 
+var heart;
+
 function preload() {
 
 	game.load.image('background', 'assets/background.png?v=1');
 	game.load.image('floor', 'assets/floor.png?v=1');
 	game.load.image('wall', 'assets/wall.png');
-	game.load.spritesheet('bunny_male', 'assets/bunny_male.png?v=3', 32, 32);
-	game.load.spritesheet('bunny_female', 'assets/bunny_female.png', 18, 31, 12, 0, 1);
+	game.load.spritesheet('bunny', 'assets/bunny.png', 32, 32);
+	game.load.spritesheet('heart', 'assets/heart.png', 16, 16);
 
 	game.load.image('fox_body_bg', 'assets/fox_body_bg.png');
 	game.load.image('fox_body_fg', 'assets/fox_body_fg.png');
@@ -51,6 +53,10 @@ function create() {
 	game.add.tileSprite(-1000000, 0, 2000000, 128, 'background');
 	game.add.tileSprite(-1000000, 128, 2000000, 32, 'floor');
 	game.add.tileSprite(-256, 0, 32, 128, 'wall');
+	heart = game.add.sprite(5, 5, 'heart');
+	heart.animations.add('progress', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 0);
+	heart.animations.play('progress', 0);
+	heart.fixedToCamera = true;
 
 	foxBg = game.add.group();
 	foxBg.addMultiple([
@@ -69,7 +75,7 @@ function create() {
 	for (var i = 0, len = bunnies.length; i < len; i++) {
 
 		var bunny = {
-			sprite: game.add.sprite(0, 128, 'bunny_male'),
+			sprite: game.add.sprite(0, 128, 'bunny'),
 			state: BunnyState.IDLE,
 			destination: 0,
 			timer: Math.random() * 3 + 2,
@@ -85,7 +91,7 @@ function create() {
 		bunnies[i] = bunny;
 	}
 
-	player = game.add.sprite(0, 128, 'bunny_male');
+	player = game.add.sprite(0, 128, 'bunny');
 	player.anchor.setTo(.5, 1);
 	player.animations.add('idle', [0, 1, 2, 3, 4, 5], 12, true);
 	player.animations.add('walk', [6, 7, 8, 9, 10, 11], 12, true);
@@ -222,6 +228,8 @@ function update() {
 	loveMeter = (playerState == BunnyState.KISSING) ?
 	 	Math.max(loveMeter - game.time.physicsElapsed / 2, 0) :
 	 	Math.min(loveMeter + game.time.physicsElapsed / 5, 1);
+	heart.animations.currentAnim.setFrame(Math.floor(loveMeter * 9));
+
 
 	var deltaDest = destination - player.x;
 	var dirDest = Math.sign(deltaDest);
@@ -331,7 +339,7 @@ function update() {
 }
 
 function render() {
-	game.debug.text(loveMeter, 8, 8);
+	//game.debug.text(loveMeter, 8, 8);
 }
 
 function reset() {
