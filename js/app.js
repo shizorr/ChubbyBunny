@@ -7,7 +7,6 @@ BunnyState = {
 	BORN: 3,
 	THROWN: 4,
 	EATEN: 5,
-	FLEE: 6,
 }
 
 var background;
@@ -27,8 +26,9 @@ var destination;
 
 function preload() {
 
-	game.load.image('background', 'assets/scene.png?v=3');
-	game.load.image('floor', 'assets/floor.png');
+	game.load.image('background', 'assets/background.png?v=1');
+	game.load.image('floor', 'assets/floor.png?v=1');
+	game.load.image('wall', 'assets/wall.png');
 	game.load.spritesheet('bunny_male', 'assets/bunny_male.png?v=3', 32, 32);
 	game.load.spritesheet('bunny_female', 'assets/bunny_female.png', 18, 31, 12, 0, 1);
 
@@ -40,15 +40,17 @@ function preload() {
 
 function create() {
 
+	game.world.setBounds(-256, 0, 512, 160);
+
 	Phaser.Canvas.setImageRenderingCrisp(game.canvas);
 	game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
 	game.scale.pageAlignHorizontally = true;
 	game.scale.pageAlignVertically = true;
 	game.scale.windowConstraints = { right: 'layout', bottom: 'layout' };
 
-	//background = game.add.sprite(0, 0, 'background');
-
-	var floor = game.add.tileSprite(-1000000, 128, 2000000, 32, 'floor');
+	game.add.tileSprite(-1000000, 0, 2000000, 128, 'background');
+	game.add.tileSprite(-1000000, 128, 2000000, 32, 'floor');
+	game.add.tileSprite(-256, 0, 32, 128, 'wall');
 
 	foxBg = game.add.group();
 	foxBg.addMultiple([
@@ -91,7 +93,7 @@ function create() {
 	player.animations.add('idle_carrying', [24], 0);
 	player.animations.add('walk_carrying', [25, 26, 27, 28, 29, 30], 12, true);
 
-	game.camera.bounds = null;
+	game.camera.follow(player);
 	game.input.maxPointers = 1;
 
 	reset();
@@ -116,6 +118,7 @@ function update() {
 				if (bunny.timer <= 0) {
 					bunny.sprite.animations.play('walk');
 					bunny.destination = bunny.sprite.x + ((Math.random() < .5) ? -1 : 1) * ((Math.random() * 50) + 50);
+					bunny.destination = Math.max(bunny.destination, - 214);
 					bunny.sprite.scale.x = Math.sign(bunny.destination - bunny.sprite.x) * Math.abs(bunny.sprite.scale.x);
 					bunny.state = BunnyState.WALKING;
 				}
@@ -150,6 +153,7 @@ function update() {
 					bunny.state = BunnyState.IDLE;
 					bunny.timer = Math.random() * 3 + 2;
 				}
+
 				break;
 			case BunnyState.EATEN:
 				bunny.sprite.x = foxBg.left + bunny.offset;
@@ -162,6 +166,10 @@ function update() {
 			bunny.sprite.animations.play('idle');
 			bunny.state = BunnyState.EATEN;
 			bunny.offset = Math.round(Math.random() * 25) + 25;
+		}
+
+		if (bunny.sprite.x < -214) {
+			bunny.sprite.x = -214;
 		}
 	}
 
@@ -190,6 +198,7 @@ function update() {
 				for (var i = 0, len = bunnies.length; i < len; i++) {
 					var bunny = bunnies[i];
 					if (!bunny.sprite.visible) { continue; }
+					if (!((bunny.state == BunnyState.IDLE) || (bunny.state == BunnyState.WALKING))) { continue; }
 					// note: due to sprite.input.pointerOver() behaving weird resorted to checking the bound contain myself
 					var rect = new Phaser.Rectangle(Math.min(bunny.sprite.left, bunny.sprite.right), bunny.sprite.top, Math.abs(bunny.sprite.width), bunny.sprite.height);
 					if (rect.contains(pointer.worldX, pointer.worldY)) {
@@ -233,6 +242,8 @@ function update() {
 		case BunnyState.WALKING:
 			if (player.x > foxBg.x + 8) {
 				reset();
+			} else if (player.x < -214) {
+				player.x = -214;
 			}
 			if (deltaDest < 8) {
 				if (isCarrying) {
