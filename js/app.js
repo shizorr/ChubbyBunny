@@ -13,7 +13,7 @@ var background;
 var platforms;
 
 var foxBg;
-var foxFg;
+var foxHead;
 var snapTimer;
 var numBunniesInMouth;
 
@@ -47,12 +47,13 @@ function preload() {
 	game.load.image('fox_body_bg', 'assets/fox_body_bg.png');
 	game.load.image('fox_body_fg', 'assets/fox_body_fg.png');
 	game.load.image('fox_head_bg', 'assets/fox_head_bg.png');
-	game.load.image('fox_head_fg', 'assets/fox_head_fg.png');
+	game.load.spritesheet('fox_head_fg', 'assets/fox_head_fg.png?v=1', 99, 40);
 
 	game.load.audio('poof', 'assets/poof.ogg?v=1');
 	game.load.audio('pick_up', 'assets/pick_up.ogg');
 	game.load.audio('throw', 'assets/throw.ogg');
 	game.load.audio('death', 'assets/death.ogg');
+	game.load.audio('music', 'assets/Kick Shock.mp3');
 }
 
 function create() {
@@ -78,13 +79,17 @@ function create() {
 		game.add.sprite(0, 0, 'fox_body_bg'),
 		game.add.sprite(0, 0, 'fox_head_bg')]);
 	foxFg = game.add.group();
-	foxFg.addMultiple([
-		game.add.sprite(0, 0, 'fox_body_fg'),
-		game.add.sprite(0, 0, 'fox_head_fg')]);
+	foxHead = game.add.sprite(0, 0, 'fox_head_fg');
+	foxHead.animations.add('idle', [0], 0, false);
+	foxHead.animations.add('snap', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0], 24, false);
+	foxHead.animations.add('close', [0, 1, 2, 3, 4, 5], 24, false);
+	foxHead.animations.add('aboutToSnap', [0, 1, 2, 1], 1, true)
+	foxFg.addMultiple([game.add.sprite(0, 0, 'fox_body_fg'), foxHead]);
 	foxBg.scale.setTo(2, 2);
 	foxFg.scale.setTo(2, 2);
 	foxBg.y = 48;
 	foxFg.y = 48;
+	foxHead.animations.play('idle');
 
 	bunnies = Array(100);
 	for (var i = 0, len = bunnies.length; i < len; i++) {
@@ -117,18 +122,27 @@ function create() {
 	game.camera.follow(player);
 	game.input.maxPointers = 1;
 
-	sfxPoof = game.add.audio('poof');
-	sfxPickUp = game.add.audio('pick_up');
-	sfxThrow = game.add.audio('throw');
-	sfxDeath = game.add.audio('death');
+	sfxPoof = game.add.audio('poof', .7);
+	sfxPickUp = game.add.audio('pick_up', .7);
+	sfxThrow = game.add.audio('throw', .7);
+	sfxDeath = game.add.audio('death', .7);
+
+	var music = game.add.audio('music', .4, true);
+	music.play();
 
 	reset();
 }
 
 function update() {
 
+	if (playerDied || playerVictorious) {
+		return;
+	}
+
 	if (player.x > foxBg.x + 8) {
 		playerDied = true;
+		foxHead.animations.play('close');
+		player.visible = false;
 		return;
 	} 
 
@@ -137,10 +151,13 @@ function update() {
 	foxFg.x -= game.time.physicsElapsed * foxSpeedMultiplier;
 
 	if ((foxBg.x <= -140) && (numBunniesInMouth >= 16)) {
+		foxHead.animations.play('close');
 		playerVictorious = true;
 	}
 
 	if (numBunniesInMouth > 0) {
+		foxHead.animations.play('aboutToSnap');
+		foxHead.animations.currentAnim.speed = 10 - snapTimer;
 		snapTimer -= game.time.physicsElapsed;
 
 		if (snapTimer <= 0) {
@@ -153,6 +170,7 @@ function update() {
 			snapTimer = 10;
 			numBunniesInMouth = 0;
 			sfxDeath.play();
+			foxHead.animations.play('snap');
 		}
 	}
 
@@ -387,8 +405,8 @@ function update() {
 }
 
 function render() {
-	game.debug.text(snapTimer, 8, 8);
-	game.debug.text(numBunniesInMouth, 8, 24);
+	//game.debug.text(snapTimer, 8, 8);
+	//game.debug.text(numBunniesInMouth, 8, 24);
 
 	if (playerDied) {
 		game.debug.text('YOU DIED', 64, 16);
