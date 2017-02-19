@@ -4,8 +4,29 @@
 <head>
 	<meta charset="utf-8" />
 	<title>HonJam</title>
-	<script src="js/phaser/phaser.js"></script>
+	<script src="https://cdn.jsdelivr.net/phaser-ce/2.7.3/phaser.min.js"></script>
 	<script src="js/app.js"></script>
+	<script type="text/javascript">
+		window.onload = function() {
+			var conf = {
+				width: 240,
+				height: 160,
+				renderer: Phaser.AUTO,
+				parent: 'content',
+				transparent: false,
+				antialias: false
+			};
+
+			var game = new Phaser.Game(conf);
+
+			game.state.add('Boot', ChubbyBunny.Boot);
+			game.state.add('Preloader', ChubbyBunny.Preloader);
+			game.state.add('TitleScreen', ChubbyBunny.TitleScreen);
+			game.state.add('Game', ChubbyBunny.Game);
+
+			game.state.start('Boot');
+		};
+	</script>
 </head>
 <body bgcolor="#000" style="margin: 0; overflow: hidden;">
 	<div id="content"></div>

@@ -1,1 +1,3 @@
-.tern-project
+js/app.js.map
+node_modules/
+.sublime-grunt.cache
